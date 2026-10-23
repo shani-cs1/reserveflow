@@ -1,0 +1,13 @@
+node_modules
+.git
+.github
+dist
+dist-server
+.env
+.env.local
+*.log
+npm-debug.log*
+.DS_Store
+coverage
+.cache
+ReserveFlow-Complete.zip

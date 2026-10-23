@@ -1,0 +1,62 @@
+# ==============================================================================
+# Docker Compose Orchestration for ReserveFlow
+# Services: PostgreSQL 16 + ReserveFlow Full-Stack API & UI
+# ==============================================================================
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: reserveflow-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-reserveflow_db}
+      POSTGRES_USER: ${POSTGRES_USER:-reserveflow}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-reserveflow_secret_pass}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-reserveflow} -d ${POSTGRES_DB:-reserveflow_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    networks:
+      - reserveflow-net
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: reserveflow-app
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_URL: postgres://${POSTGRES_USER:-reserveflow}:${POSTGRES_PASSWORD:-reserveflow_secret_pass}@postgres:5432/${POSTGRES_DB:-reserveflow_db}
+      # Required: set a strong, non-default secret in .env before starting production.
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set to a strong random value}
+      CORS_ORIGIN: "*"
+      LOG_LEVEL: info
+    ports:
+      - "3000:3000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    networks:
+      - reserveflow-net
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  reserveflow-net:
+    driver: bridge

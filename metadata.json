@@ -1,0 +1,6 @@
+{
+  "name": "ReserveFlow - Inventory Reservation System",
+  "description": "Production-oriented inventory reservation system with atomic transactions, concurrency controls, idempotency, audit trail, and operations dashboard.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
