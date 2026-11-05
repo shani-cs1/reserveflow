@@ -20,7 +20,7 @@ jobs:
           POSTGRES_PASSWORD: testpassword123
         ports:
           - 5432:5432
-        options: >-
+        options: &gt;-
           --health-cmd pg_isready
           --health-interval 5s
           --health-timeout 5s
@@ -34,34 +34,49 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: 'npm'
 
-      - name: 1. Lockfile-based Dependency Installation
+      - name: 1. Install Root Dependencies
         run: npm ci
 
-      - name: 2. Type Checking & Compilation Verification
+      - name: 2. Install API Dependencies
+        working-directory: apps/api
+        run: npm ci
+
+      - name: 3. Root Type Checking
         run: npm run lint
 
-      - name: 3. Run Automated Unit & Integration Tests
+      - name: 4. API Type Checking
+        working-directory: apps/api
+        run: npm run typecheck
+
+      - name: 5. Run Automated Unit & Integration Tests
         env:
           NODE_ENV: test
           TEST_DATABASE_URL: postgres://reserveflow:testpassword123@localhost:5432/reserveflow_test
           JWT_SECRET: ci-testing-jwt-secret-key-12345
         run: npm run test
 
-      - name: 4. Production Application Build
+      - name: 6. Build Frontend
         run: npm run build
 
-      - name: 5. Generate Standalone Deliverable ZIP Archive
+      - name: 7. Build API
+        working-directory: apps/api
+        run: npm run build
+
+      - name: 8. Generate Standalone Deliverable ZIP Archive
         run: npm run package:zip
 
-      - name: 6. Repository & Dependency Vulnerability Scan (Trivy)
+      - name: 9. Repository Vulnerability Scan (Trivy)
         uses: aquasecurity/trivy-action@master
         with:
-          scan-type: 'fs'
-          scan-ref: '.'
-          severity: 'CRITICAL,HIGH'
-          exit-code: '0' # Non-blocking for warning review
+          scan-type: fs
+          scan-ref: .
+          severity: CRITICAL,HIGH
+          exit-code: '0'
 
-      - name: 7. Audit NPM Dependencies
+      - name: 10. Audit Root Dependencies
+        run: npm audit --audit-level=high || true
+
+      - name: 11. Audit API Dependencies
+        working-directory: apps/api
         run: npm audit --audit-level=high || true
